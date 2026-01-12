@@ -1,0 +1,24 @@
+{
+  "name": "discord-autovoc",
+  "version": "1.0.0",
+  "description": "Bot Discord pour maintenir une présence vocale 24/7",
+  "main": "discord-autovoc1.js",
+  "scripts": {
+    "start": "node discord-autovoc1.js",
+    "dev": "node discord-autovoc1.js"
+  },
+  "keywords": [
+    "discord",
+    "selfbot",
+    "voice",
+    "autovoc"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js-selfbot-v13": "^2.14.14"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
