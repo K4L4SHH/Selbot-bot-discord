@@ -1,4 +1,4 @@
-# 🤖 Discord Selfbot 
+# 🤖 Discord Selfbot (Encore en dev des erreur son possible si possible me dire en mp vos erreur pr fix)
 
 ``Si besoin de plus d aide mp k4l4sh__ ``
 
