@@ -953,7 +953,7 @@ function formatUptime(ms) {
 // ============================================
 // CONNEXION
 // ============================================
-const TOKEN = process.env.DISCORD_TOKEN || '';
+const TOKEN = process.env.DISCORD_TOKEN || 'TON_TOKEN_ICI';
 
 if (TOKEN === '') {
   console.error('❌ ERREUR: Token Discord non configuré !');
