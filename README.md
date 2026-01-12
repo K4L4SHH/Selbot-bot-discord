@@ -1,4 +1,4 @@
-# 🤖 Discord Selfbot Complet
+# 🤖 Discord Selfbot 
 
 ``Si besoin de plus d aide mp k4l4sh__ ``
 
