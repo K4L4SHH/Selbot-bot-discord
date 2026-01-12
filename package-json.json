@@ -1,11 +1,11 @@
 {
-  "name": "discord-autovoc",
+  "name": "",
   "version": "1.0.0",
-  "description": "Bot Discord pour maintenir une présence vocale 24/7",
+  "description": "",
   "main": "discord-autovoc1.js",
   "scripts": {
-    "start": "node discord-autovoc1.js",
-    "dev": "node discord-autovoc1.js"
+    "start": "",
+    "dev": ""
   },
   "keywords": [
     "discord",
