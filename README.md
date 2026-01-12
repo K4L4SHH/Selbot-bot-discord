@@ -1,5 +1,6 @@
-# Selbot-bot-discord
 # 🤖 Discord Selfbot Complet
+
+``Si besoin de plus d aide mp k4l4sh__ ``
 
 Un selfbot Discord ultra-complet avec auto-vocal 24/7, RPC personnalisé, et plein d'autres fonctionnalités.
 
@@ -266,11 +267,7 @@ node selfbot.js
 ### Scénario 4 : RPC avec images custom
 
 ```bash
-# 1. Créer une app sur https://discord.com/developers/applications
-# 2. Upload des images dans Rich Presence > Art Assets
-# 3. Utiliser dans le selfbot
-
-!rpc app VOTRE_APP_ID
+Vous pouvez directement mettre l image mais pour mettre l image faut prendre le lien de l image sur discord
 !rpc image logo Mon jeu
 !rpc smallimage icon En ligne
 !rpc set Mon Jeu
@@ -326,12 +323,6 @@ Le selfbot inclut les Application IDs de jeux populaires :
 - Assurez-vous que dans vos paramètres Discord, "Afficher l'activité actuelle" est activé
 - Utilisez `!rpc show` pour voir la configuration actuelle
 
-### Les images ne s'affichent pas ?
-
-- Les images nécessitent un Application ID Discord valide
-- Utilisez les presets (`!rpc preset valorant`) qui ont déjà les bons IDs
-- Pour des images custom, créez votre propre application sur https://discord.com/developers/applications
-
 ### Le bot se déconnecte constamment du vocal ?
 
 - Vérifiez votre connexion internet
@@ -361,7 +352,6 @@ Appuyez sur `CTRL+C` dans le terminal. Le selfbot se déconnectera proprement du
 
 ### Bonnes pratiques
 
-- ✅ Utilisez un compte secondaire
 - ✅ Ne spammez pas les commandes
 - ✅ Respectez les rate limits
 - ✅ N'utilisez pas pour harceler ou nuire
