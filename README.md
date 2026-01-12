@@ -2,8 +2,6 @@
 
 ``Si besoin de plus d aide mp k4l4sh__ ``
 
-Un selfbot Discord ultra-complet avec auto-vocal 24/7, RPC personnalisé, et plein d'autres fonctionnalités.
-
 > ⚠️ **ATTENTION** : L'utilisation de selfbots viole les [Conditions d'utilisation de Discord](https://discord.com/terms) et peut entraîner le **bannissement permanent** de votre compte. Utilisez à vos risques et périls.
 
 ---
