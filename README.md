@@ -148,6 +148,8 @@ node selfbot.js
 ---
 
 ## 🎮 Commandes
+### BackUp (`!sb backup`) 
+`Ajout d une commande !sb backup y a le help a vous de voir (les backup seron dans un fichier et dossier qui se creera automatiquement)`
 
 ### 🎤 Auto-Vocal (`!av`)
 
