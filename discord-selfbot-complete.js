@@ -77,11 +77,12 @@ const DISCORD_APPS = {
 // ============================================
 client.on('ready', async () => {
   console.log('╔════════════════════════════════════════╗');
-  console.log(`║  ✅ Connecté: ${client.user.tag.padEnd(23)} ║`);
+  console.log(`║ ✅ Connecté: ${client.user.tag.padEnd(23)} ║`);
   console.log('╠════════════════════════════════════════╣');
   console.log('║  🎤 Auto-Vocal: !av help               ║');
   console.log('║  🎨 RPC Custom: !rpc help              ║');
   console.log('║  ⚙️  Général: !sb help                  ║');
+  console.log('║  📦 Backup : !sb backup                ║');
   console.log('╚════════════════════════════════════════╝');
 });
 
@@ -250,6 +251,96 @@ async function handleVocalCommands(message) {
       help += '`!av help` - Cette aide';
       
       await reply(message, help, 15000);
+      break;
+
+    case 'backup':
+      if (!args[0]) {
+        return reply(message, '❌ Usage: `!sb backup <server|list|load> [id]`\n\n' +
+          '`!sb backup server` - Backup du serveur actuel\n' +
+          '`!sb backup list` - Liste des backups\n' +
+          '`!sb backup load <id>` - Charger un backup');
+      }
+
+      const backupCmd = args[0].toLowerCase();
+
+      if (backupCmd === 'server') {
+        if (!message.guild) {
+          return reply(message, '❌ Cette commande doit être utilisée dans un serveur');
+        }
+
+        await reply(message, '⏳ Création du backup...', 10000);
+        
+        try {
+          const backup = await createGuildBackup(message.guild);
+          const backupId = Date.now();
+          
+          // Sauvegarder dans un fichier
+          const fs = require('fs');
+          if (!fs.existsSync('./backups')) {
+            fs.mkdirSync('./backups');
+          }
+          
+          fs.writeFileSync(
+            `./backups/backup-${backupId}.json`,
+            JSON.stringify(backup, null, 2)
+          );
+          
+          await reply(message, `✅ Backup créé !\n\nID: \`${backupId}\`\n` +
+            `Serveur: **${backup.name}**\n` +
+            `Salons: ${backup.channels.length}\n` +
+            `Rôles: ${backup.roles.length}\n` +
+            `Emojis: ${backup.emojis.length}`, 15000);
+        } catch (error) {
+          await reply(message, `❌ Erreur: ${error.message}`);
+        }
+      } else if (backupCmd === 'list') {
+        const fs = require('fs');
+        if (!fs.existsSync('./backups')) {
+          return reply(message, '❌ Aucun backup trouvé');
+        }
+
+        const files = fs.readdirSync('./backups').filter(f => f.endsWith('.json'));
+        
+        if (files.length === 0) {
+          return reply(message, '❌ Aucun backup trouvé');
+        }
+
+        let list = '**📦 Liste des backups**\n\n';
+        files.forEach(file => {
+          const backup = JSON.parse(fs.readFileSync(`./backups/${file}`));
+          const id = file.replace('backup-', '').replace('.json', '');
+          list += `\`${id}\` - **${backup.name}** (${new Date(parseInt(id)).toLocaleString()})\n`;
+        });
+
+        await reply(message, list, 20000);
+      } else if (backupCmd === 'load') {
+        const backupId = args[1];
+        if (!backupId) {
+          return reply(message, '❌ Usage: `!sb backup load <id>`');
+        }
+
+        if (!message.guild) {
+          return reply(message, '❌ Cette commande doit être utilisée dans un serveur');
+        }
+
+        await reply(message, '⏳ Chargement du backup...', 10000);
+
+        try {
+          const fs = require('fs');
+          const backupPath = `./backups/backup-${backupId}.json`;
+          
+          if (!fs.existsSync(backupPath)) {
+            return reply(message, '❌ Backup introuvable');
+          }
+
+          const backup = JSON.parse(fs.readFileSync(backupPath));
+          await loadGuildBackup(message.guild, backup);
+          
+          await reply(message, `✅ Backup chargé !\n\nServeur restauré: **${backup.name}**`);
+        } catch (error) {
+          await reply(message, `❌ Erreur: ${error.message}`);
+        }
+      }
       break;
 
     default:
@@ -538,15 +629,197 @@ async function handleGeneralCommands(message) {
       await reply(message, info, 15000);
       break;
 
+    case 'perms':
+      if (!message.guild) {
+        return reply(message, '❌ Cette commande doit être utilisée dans un serveur');
+      }
+
+      const member = message.guild.members.cache.get(client.user.id);
+      const perms = member.permissions;
+
+      let permsList = '**🔐 Vos permissions sur ce serveur**\n\n';
+      permsList += `Serveur: **${message.guild.name}**\n\n`;
+      
+      const importantPerms = [
+        { name: 'ADMINISTRATOR', label: '👑 Administrateur' },
+        { name: 'MANAGE_GUILD', label: '⚙️ Gérer le serveur' },
+        { name: 'MANAGE_ROLES', label: '🎭 Gérer les rôles' },
+        { name: 'MANAGE_CHANNELS', label: '📁 Gérer les salons' },
+        { name: 'MANAGE_MESSAGES', label: '✉️ Gérer les messages' },
+        { name: 'KICK_MEMBERS', label: '👢 Expulser des membres' },
+        { name: 'BAN_MEMBERS', label: '🔨 Bannir des membres' }
+      ];
+
+      importantPerms.forEach(perm => {
+        const has = perms.has(perm.name);
+        permsList += `${has ? '✅' : '❌'} ${perm.label}\n`;
+      });
+
+      permsList += `\n💡 Pour le backup, vous avez besoin de:\n`;
+      permsList += `└─ Administrateur OU\n`;
+      permsList += `└─ Gérer le serveur + Gérer les rôles + Gérer les salons`;
+
+      await reply(message, permsList, 20000);
+      break;
+
+    case 'backup':
+      const backupAction = args[0]?.toLowerCase();
+      
+      if (!backupAction) {
+        let backupHelp = '**📦 Commandes Backup**\n\n';
+        backupHelp += '`!sb backup create` - Backup du serveur actuel\n';
+        backupHelp += '`!sb backup list` - Liste des backups\n';
+        backupHelp += '`!sb backup load <id>` - Charger un backup\n';
+        backupHelp += '`!sb backup delete <id>` - Supprimer un backup\n\n';
+        backupHelp += '⚠️ Le backup restaure la structure complète du serveur';
+        return reply(message, backupHelp, 15000);
+      }
+
+      if (backupAction === 'create') {
+        if (!message.guild) {
+          return reply(message, '❌ Cette commande doit être utilisée dans un serveur');
+        }
+
+        await reply(message, '⏳ Création du backup en cours...', 20000);
+        
+        try {
+          const backup = await createGuildBackup(message.guild);
+          const backupId = Date.now();
+          
+          const fs = require('fs');
+          if (!fs.existsSync('./backups')) {
+            fs.mkdirSync('./backups');
+          }
+          
+          fs.writeFileSync(
+            `./backups/backup-${backupId}.json`,
+            JSON.stringify(backup, null, 2)
+          );
+          
+          await message.edit(`✅ **Backup créé avec succès !**\n\n` +
+            `📋 ID: \`${backupId}\`\n` +
+            `🏷️ Serveur: **${backup.name}**\n` +
+            `📁 Salons: ${backup.channels.length}\n` +
+            `🎭 Rôles: ${backup.roles.length}\n` +
+            `😀 Emojis: ${backup.emojis.length}\n\n` +
+            `💾 Fichier: backup-${backupId}.json`);
+          
+          setTimeout(() => message.delete().catch(() => {}), 20000);
+        } catch (error) {
+          console.error('Erreur backup:', error);
+          await reply(message, `❌ Erreur lors du backup: ${error.message}`);
+        }
+        
+      } else if (backupAction === 'list') {
+        try {
+          const fs = require('fs');
+          if (!fs.existsSync('./backups')) {
+            return reply(message, '❌ Aucun backup trouvé. Créez-en un avec `!sb backup create`');
+          }
+
+          const files = fs.readdirSync('./backups').filter(f => f.endsWith('.json'));
+          
+          if (files.length === 0) {
+            return reply(message, '❌ Aucun backup trouvé');
+          }
+
+          let list = '**📦 Liste des backups**\n\n';
+          files.forEach(file => {
+            try {
+              const backup = JSON.parse(fs.readFileSync(`./backups/${file}`));
+              const id = file.replace('backup-', '').replace('.json', '');
+              const date = new Date(parseInt(id));
+              list += `\`${id}\`\n`;
+              list += `└─ **${backup.name}**\n`;
+              list += `└─ 📅 ${date.toLocaleString('fr-FR')}\n`;
+              list += `└─ 📊 ${backup.channels.length} salons, ${backup.roles.length} rôles\n\n`;
+            } catch (e) {
+              console.error('Erreur lecture backup:', e);
+            }
+          });
+
+          list += `\nUtilisez \`!sb backup load <id>\` pour charger`;
+
+          await reply(message, list, 30000);
+        } catch (error) {
+          await reply(message, `❌ Erreur: ${error.message}`);
+        }
+        
+      } else if (backupAction === 'load') {
+        const backupId = args[1];
+        if (!backupId) {
+          return reply(message, '❌ Usage: `!sb backup load <id>`\nUtilisez `!sb backup list` pour voir les IDs');
+        }
+
+        if (!message.guild) {
+          return reply(message, '❌ Cette commande doit être utilisée dans un serveur');
+        }
+
+        await reply(message, '⚠️ Chargement du backup en cours...\nCela peut prendre plusieurs minutes.', 60000);
+
+        try {
+          const fs = require('fs');
+          const backupPath = `./backups/backup-${backupId}.json`;
+          
+          if (!fs.existsSync(backupPath)) {
+            return reply(message, '❌ Backup introuvable. Vérifiez l\'ID avec `!sb backup list`');
+          }
+
+          const backup = JSON.parse(fs.readFileSync(backupPath));
+          console.log(`Chargement du backup: ${backup.name}`);
+          
+          await loadGuildBackup(message.guild, backup);
+          
+          await message.edit(`✅ **Backup chargé avec succès !**\n\n` +
+            `🏷️ Serveur restauré: **${backup.name}**\n` +
+            `📁 ${backup.channels.length} salons créés\n` +
+            `🎭 ${backup.roles.length} rôles créés`);
+          
+          setTimeout(() => message.delete().catch(() => {}), 15000);
+        } catch (error) {
+          console.error('Erreur chargement backup:', error);
+          await reply(message, `❌ Erreur lors du chargement: ${error.message}`);
+        }
+        
+      } else if (backupAction === 'delete') {
+        const backupId = args[1];
+        if (!backupId) {
+          return reply(message, '❌ Usage: `!sb backup delete <id>`');
+        }
+
+        try {
+          const fs = require('fs');
+          const backupPath = `./backups/backup-${backupId}.json`;
+          
+          if (!fs.existsSync(backupPath)) {
+            return reply(message, '❌ Backup introuvable');
+          }
+
+          const backup = JSON.parse(fs.readFileSync(backupPath));
+          fs.unlinkSync(backupPath);
+          
+          await reply(message, `✅ Backup supprimé: **${backup.name}** (${backupId})`);
+        } catch (error) {
+          await reply(message, `❌ Erreur: ${error.message}`);
+        }
+        
+      } else {
+        await reply(message, '❌ Action inconnue. Utilisez `!sb backup` pour voir l\'aide');
+      }
+      break;
+
     case 'help':
       let help = '**⚙️ Commandes Générales**\n\n';
       help += '`!sb ping` - Latence du bot\n';
       help += '`!sb purge [nombre]` - Supprime vos messages\n';
       help += '`!sb info` - Infos du selfbot\n';
+      help += '`!sb perms` - Vos permissions sur le serveur\n';
+      help += '`!sb backup` - Gestion des backups serveur\n';
       help += '`!sb help` - Cette aide\n\n';
       help += '**Modules disponibles:**\n';
       help += '🎤 `!av help` - Auto-vocal\n';
-      help += '🎨 `!rpc help` - RPC custom';
+      help += '🎨 `!rpc help` - RPC custom\n';
+      help += '📦 `!sb backup` - Backup serveurs';
       
       await reply(message, help, 15000);
       break;
@@ -849,8 +1122,8 @@ async function applyRPCPreset(preset, args) {
     case 'netflix':
       rpcState.type = 'WATCHING';
       rpcState.name = args.join(' ') || 'Netflix';
-      rpcState.details = 'La chute';
-      rpcState.state = '🍿 En plein binge-watch';
+      rpcState.details = '🍿 Binge watching';
+      rpcState.state = 'Saison en cours';
       break;
 
     case 'youtube':
@@ -870,10 +1143,9 @@ async function applyRPCPreset(preset, args) {
       break;
 
     default:
-      rpcState.type = 'WATCHING';
-      rpcState.name = 'Made by @K4L4SH';
-      rpcState.details = 'By js';
-      rpcState.state = 'By K4L4SH';
+      rpcState.type = 'PLAYING';
+      rpcState.name = 'Discord';
+      rpcState.details = 'Custom Status';
       rpcState.applicationId = null;
   }
 
@@ -951,11 +1223,200 @@ function formatUptime(ms) {
 }
 
 // ============================================
-// CONNEXION
+// FONCTIONS BACKUP SERVEUR
 // ============================================
-const TOKEN = process.env.DISCORD_TOKEN || 'TON_TOKEN_ICI';
+async function createGuildBackup(guild) {
+  console.log('📦 Création du backup...');
+  
+  const backup = {
+    name: guild.name,
+    icon: guild.iconURL({ dynamic: true, size: 1024 }),
+    banner: guild.bannerURL({ dynamic: true, size: 1024 }),
+    description: guild.description,
+    verificationLevel: guild.verificationLevel,
+    explicitContentFilter: guild.explicitContentFilter,
+    defaultMessageNotifications: guild.defaultMessageNotifications,
+    afkTimeout: guild.afkTimeout,
+    roles: [],
+    channels: [],
+    emojis: [],
+    createdAt: Date.now()
+  };
 
-if (TOKEN === '') {
+  // Backup des rôles
+  console.log('📝 Backup des rôles...');
+  guild.roles.cache
+    .sort((a, b) => b.position - a.position)
+    .forEach(role => {
+      if (role.name !== '@everyone') {
+        backup.roles.push({
+          name: role.name,
+          color: role.color,
+          hoist: role.hoist,
+          permissions: role.permissions.bitfield.toString(),
+          mentionable: role.mentionable,
+          position: role.position
+        });
+      }
+    });
+
+  // Backup des salons
+  console.log('📝 Backup des salons...');
+  guild.channels.cache
+    .sort((a, b) => a.position - b.position)
+    .forEach(channel => {
+      const channelData = {
+        name: channel.name,
+        type: channel.type,
+        position: channel.position,
+        topic: channel.topic,
+        nsfw: channel.nsfw,
+        rateLimitPerUser: channel.rateLimitPerUser,
+        parent: channel.parent?.name || null
+      };
+
+      if (channel.type === 'GUILD_VOICE') {
+        channelData.bitrate = channel.bitrate;
+        channelData.userLimit = channel.userLimit;
+      }
+
+      backup.channels.push(channelData);
+    });
+
+  // Backup des emojis
+  console.log('📝 Backup des emojis...');
+  guild.emojis.cache.forEach(emoji => {
+    backup.emojis.push({
+      name: emoji.name,
+      url: emoji.url,
+      animated: emoji.animated
+    });
+  });
+
+  console.log('✅ Backup créé');
+  return backup;
+}
+
+async function loadGuildBackup(guild, backup) {
+  console.log('📦 Chargement du backup...');
+
+  // Supprimer les salons existants
+  console.log('🗑️ Suppression des salons...');
+  for (const channel of guild.channels.cache.values()) {
+    try {
+      await channel.delete();
+      await sleep(1000);
+    } catch (e) {}
+  }
+
+  // Supprimer les rôles existants
+  console.log('🗑️ Suppression des rôles...');
+  for (const role of guild.roles.cache.values()) {
+    if (role.name !== '@everyone' && !role.managed) {
+      try {
+        await role.delete();
+        await sleep(1000);
+      } catch (e) {}
+    }
+  }
+
+  // Modifier le serveur
+  console.log('⚙️ Configuration du serveur...');
+  try {
+    await guild.edit({
+      name: backup.name,
+      verificationLevel: backup.verificationLevel,
+      explicitContentFilter: backup.explicitContentFilter,
+      defaultMessageNotifications: backup.defaultMessageNotifications,
+      afkTimeout: backup.afkTimeout
+    });
+  } catch (e) {
+    console.error('Erreur config serveur:', e.message);
+  }
+
+  // Créer les rôles
+  console.log('📝 Création des rôles...');
+  const roleMap = new Map();
+  for (const roleData of backup.roles) {
+    try {
+      const role = await guild.roles.create({
+        name: roleData.name,
+        color: roleData.color,
+        hoist: roleData.hoist,
+        permissions: roleData.permissions,
+        mentionable: roleData.mentionable
+      });
+      roleMap.set(roleData.name, role);
+      await sleep(1000);
+    } catch (e) {
+      console.error(`Erreur création rôle ${roleData.name}:`, e.message);
+    }
+  }
+
+  // Créer les catégories
+  console.log('📝 Création des catégories...');
+  const categoryMap = new Map();
+  for (const channelData of backup.channels) {
+    if (channelData.type === 'GUILD_CATEGORY') {
+      try {
+        const category = await guild.channels.create(channelData.name, {
+          type: 'GUILD_CATEGORY',
+          position: channelData.position
+        });
+        categoryMap.set(channelData.name, category);
+        await sleep(1000);
+      } catch (e) {
+        console.error(`Erreur création catégorie ${channelData.name}:`, e.message);
+      }
+    }
+  }
+
+  // Créer les salons
+  console.log('📝 Création des salons...');
+  for (const channelData of backup.channels) {
+    if (channelData.type !== 'GUILD_CATEGORY') {
+      try {
+        const options = {
+          type: channelData.type,
+          topic: channelData.topic,
+          nsfw: channelData.nsfw,
+          rateLimitPerUser: channelData.rateLimitPerUser,
+          position: channelData.position,
+          parent: channelData.parent ? categoryMap.get(channelData.parent) : null
+        };
+
+        if (channelData.type === 'GUILD_VOICE') {
+          options.bitrate = channelData.bitrate;
+          options.userLimit = channelData.userLimit;
+        }
+
+        await guild.channels.create(channelData.name, options);
+        await sleep(1000);
+      } catch (e) {
+        console.error(`Erreur création salon ${channelData.name}:`, e.message);
+      }
+    }
+  }
+
+  // Créer les emojis
+  console.log('📝 Création des emojis...');
+  for (const emojiData of backup.emojis) {
+    try {
+      await guild.emojis.create(emojiData.url, emojiData.name);
+      await sleep(2000);
+    } catch (e) {
+      console.error(`Erreur création emoji ${emojiData.name}:`, e.message);
+    }
+  }
+
+  console.log('✅ Backup chargé');
+}
+
+
+// ============================================
+const TOKEN = process.env.DISCORD_TOKEN || '';
+
+if (TOKEN === 'Supprimez ce message pas besoin du token ici laissez vide') {
   console.error('❌ ERREUR: Token Discord non configuré !');
   console.error('Modifiez le code ou définissez DISCORD_TOKEN dans les variables d\'environnement.');
   process.exit(1);
