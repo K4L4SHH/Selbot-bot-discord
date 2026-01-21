@@ -1,6 +1,6 @@
 # 🤖 Discord Selfbot (Encore en dev des erreur son possible si possible me dire en mp vos erreur pr fix)
 
-``Si besoin de plus d aide mp k4l4sh__ ``
+``Si besoin de plus d aide mp .ins0ciable. ``
 
 > ⚠️ **ATTENTION** : L'utilisation de selfbots viole les [Conditions d'utilisation de Discord](https://discord.com/terms) et peut entraîner le **bannissement permanent** de votre compte. Utilisez à vos risques et périls.
 
